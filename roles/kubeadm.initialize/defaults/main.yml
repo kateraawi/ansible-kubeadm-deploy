@@ -1,0 +1,7 @@
+---
+kube_control_plane_internal_network_address: "10.1.0.10"
+kube_control_plane_external_network_address: "192.168.100.50"
+kube_control_plane_name: "{{ inventory_hostname }}"
+kube_control_plane_domain_name: "kube-control.kube.local"
+kube_control_plane_port: 6443
+kube_pod_network_cidr: "10.244.0.0/16"

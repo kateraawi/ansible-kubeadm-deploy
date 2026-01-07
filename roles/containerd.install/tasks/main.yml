@@ -1,0 +1,28 @@
+---
+- name: Apt install Containerd
+  apt:
+    install_recommends: true
+    pkg:
+     - containerd
+    update_cache: yes
+
+- name: Setup Containerd
+  block:
+    - name: Containerd config file setup
+      block:
+      - name: Create folder
+        file:
+          path: /etc/containerd
+          state: directory
+
+      - name: Copy config from host
+        copy:
+          src: containerd.config.toml
+          dest: /etc/containerd/config.toml
+        notify: restart containerd
+
+- name: Enable Containerd
+  service:
+    name: containerd
+    state: started
+    enabled: yes

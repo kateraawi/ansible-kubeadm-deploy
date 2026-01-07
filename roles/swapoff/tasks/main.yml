@@ -1,0 +1,12 @@
+---
+- name: Temporarily disable swap
+  command: swapoff -a
+  when: ansible_swaptotal_mb > 0
+ 
+- name: Permanently disable swap in /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^(\s*[^#]+\s+swap\s+)'
+    line: '#\1'
+    backup: yes
+    state: present

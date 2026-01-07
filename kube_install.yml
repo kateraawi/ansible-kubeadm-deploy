@@ -1,0 +1,12 @@
+---
+- hosts: all
+  become: true
+  roles:
+    - swapoff
+    - containerd.install
+    - kubeadm.install
+
+- hosts: control
+  become: true
+  roles:
+    - kubeadm.initialize

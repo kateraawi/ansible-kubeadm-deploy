@@ -1,0 +1,96 @@
+---    
+- name: Apt install deps
+  apt:
+    install_recommends: true
+    pkg:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gpg
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Check keys
+  stat:
+    path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  register: key_stat
+
+- name: Get and install keys
+  when: not key_stat.stat.exists
+  block:
+    - name: Get keys
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v{{ kube_version }}/deb/Release.key
+        dest: /tmp/k8s_key_temp.txt
+        
+    - name: Dearmor key and move to final destination
+      ansible.builtin.command: gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /tmp/k8s_key_temp.txt
+      changed_when: true
+        
+    - name: Clean up temporary key file
+      ansible.builtin.file:
+        path: /tmp/k8s_key_temp.txt
+        state: absent
+    
+- name: Check repo
+  stat:
+    path: /etc/apt/sources.list.d/kubernetes.list
+  register: repo_stat
+
+- name: Add repo
+  when: not repo_stat.stat.exists
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kube_version }}/deb/ /"
+    filename: kubernetes
+    state: present
+    update_cache: yes
+
+- name: Apt install kuber
+  apt:
+    install_recommends: true
+    pkg:
+    - kubeadm
+    - kubelet
+    - kubectl
+
+- name: Hold kubeadm
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubeadm
+    - kubelet
+    - kubectl
+    
+- name: Start and Enable kubelet
+  systemd:
+    name: "kubelet"
+    state: started
+    enabled: true
+  
+- name: Ensure br_netfilter and overlay modules are loaded persistently at boot
+  copy:
+    content: |
+      br_netfilter
+      overlay
+    dest: /etc/modules-load.d/k8s.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: load k8s kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - br_netfilter
+    - overlay
+
+- name: Sysctl params
+  sysctl:
+    name: "{{ item }}"
+    value: '1' 
+    sysctl_set: true
+  loop:
+      - net.ipv4.ip_forward
+      - net.bridge.bridge-nf-call-iptables
