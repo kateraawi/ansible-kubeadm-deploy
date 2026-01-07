@@ -1,0 +1,8 @@
+# Ansible local config
+ansible.cfg
+
+# Inventory
+hosts.yaml
+
+# Group variables
+group_vars/
